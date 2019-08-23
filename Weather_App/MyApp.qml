@@ -59,6 +59,7 @@ App {
             maximumLineCount: 2
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
+         //   Component.onCompleted: upda()
         }
     }
     //weather stuff
@@ -110,35 +111,55 @@ App {
         id: days
         ListElement {
             day: "Sunday"
-            weather: "50 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
+
         }
         ListElement {
             day: "Monday"
-            weather: "50 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
         }
         ListElement {
             day: "Tuesday"
-            weather: "56 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
         }
         ListElement {
             day: "Wednesday"
-            weather: "56 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
         }
         ListElement {
             day: "Thursday"
-            weather: "56 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
         }
         ListElement {
             day: "Friday"
-            weather: "56 Degree"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
         }
+        ListElement {
+            day: "Saturday"
+            high_temp : "44"
+            low_temp : "sss"
+            humidity : "222"
+        }
+
 
     }
 
 
     //customized list
     Rectangle {
-        width: 180; height: 200
+        width: 250; height: 500
         //alighment
         anchors.left: parent.left
         anchors.right: parent.right
@@ -147,10 +168,14 @@ App {
         Component {
             id: contactDelegate
             Item {
-                width: 180; height: 40
+                width: 180; height: 70
+
                 Column {
                     Text { text: '<b>Day:</b> ' + day }
-                    Text { text: '<b>Weather:</b> ' + weather }
+                    Text { text: '<b>High Temp:</b> ' + high_temp }
+                    Text { text: '<b>Low Temp:</b> ' + low_temp }
+                    Text { text: '<b>Humidity :</b> ' + humidity }
+
                 }
             }
         }
@@ -160,10 +185,38 @@ App {
             model: days
             delegate: contactDelegate
             highlight: Rectangle { color: "lightsteelblue"; radius: 5 }
-
+            Component.onCompleted: updateList()
             focus: true
         }
     }
+    //API to get the weather data using the cordinates
+    //api.openweathermap.org/data/2.5/forecast?lat=35&lon=139&APPID=dba70a9c4c2aca0266c9a3a49b987a4f
+    //API key: dba70a9c4c2aca0266c9a3a49b987a4f
+    //"http://free.worldweatheronline.com/feed/weather.ashx?q=Jyv%c3%a4skyl%c3%a4,Finland&format=json&num_of_days=5&key=2d27bd6c4a274f31b0982928192308"
+
+    function  getWeatherData(lat, longi){
+       var req = new XMLHttpRequest();
+         var weatherObject;
+        var url =  "https://api.openweathermap.org/data/2.5/forecast?lat="+lat+"&lon="+longi+"&APPID=dba70a9c4c2aca0266c9a3a49b987a4f";
+        req.open("GET", url, true);
+        req.onreadystatechange = function() {
+            weatherObject = JSON.parse(req.responseText);
+            //titleText.text = weatherObject.city["name"];
+            //   days.setProperty(0, "weather", weatherObject.list[0].main.temp);
+            if (req.readyState !== 4) return;
+            if (req.status !== 200) return;
+
+        }
+        req.send();
+           return weatherObject;
+    }
+
+    function updateList(){
+        //First : Get the cordinates
+        //Second: Check if the data is already cached in the storage with current date
+        //Third :if the data is already cached, do not do api call
+        //Fourth Just update the list
+     }
 
 }
 
