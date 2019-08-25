@@ -30,7 +30,7 @@ import QtQuick 2.9
 
 import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Controls 1.0
-
+import Esri.ArcGISRuntime 100.2
 
 App {
     id: app
@@ -44,6 +44,8 @@ App {
             right: parent.right
             top: parent.top
         }
+
+
 
         height: 50 * AppFramework.displayScaleFactor
         color: app.info.propertyValue("titleBackgroundColor", "black")
@@ -59,8 +61,26 @@ App {
             maximumLineCount: 2
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
-         //   Component.onCompleted: upda()
+             Component.onCompleted: updateList()
         }
+
+
+               //Getting cordinates of the user
+                PositionSource {
+                  //  PositionSource.position.
+                   // Component.onCompleted:
+                    id: position1
+                  // text1.text = "Component is completed"
+                      onPositionChanged:{
+                          var cordinates = position1.position.coordinate;
+                           //titleText.text = cordinates.longitude + " , " + cordinates.latitude;
+                           getWeatherData(cordinates.latitude,cordinates.longitude );
+                      }
+                }
+
+
+
+
     }
     //weather stuff
     Rectangle {
@@ -185,7 +205,7 @@ App {
             model: days
             delegate: contactDelegate
             highlight: Rectangle { color: "lightsteelblue"; radius: 5 }
-            Component.onCompleted: updateList()
+         //   Component.onCompleted: updateList()
             focus: true
         }
     }
@@ -200,15 +220,19 @@ App {
         var url =  "https://api.openweathermap.org/data/2.5/forecast?lat="+lat+"&lon="+longi+"&APPID=dba70a9c4c2aca0266c9a3a49b987a4f";
         req.open("GET", url, true);
         req.onreadystatechange = function() {
-            weatherObject = JSON.parse(req.responseText);
-            //titleText.text = weatherObject.city["name"];
-            //   days.setProperty(0, "weather", weatherObject.list[0].main.temp);
+              weatherObject = JSON.parse(req.responseText);
+
             if (req.readyState !== 4) return;
             if (req.status !== 200) return;
 
+            city_name.text = weatherObject.city["name"] + ", " + weatherObject.city["country"];
+           //  days.setProperty(0, "high_temp", weatherObject.list[0].main.temp);
+            updateListHelper(weatherObject);
+          //  position1.stop();
+
         }
         req.send();
-           return weatherObject;
+           //return weatherObject;
     }
 
     function updateList(){
@@ -216,7 +240,43 @@ App {
         //Second: Check if the data is already cached in the storage with current date
         //Third :if the data is already cached, do not do api call
         //Fourth Just update the list
+        position1.start();
      }
+
+    function updateListHelper(weatherData){
+
+        //need this array to order list of days
+        var weeks = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"];
+        //what day is today
+        var date = new Date();
+        var today = date.getDay();
+        //current temperature
+        current_weather.text = weeks[today] +", " + Math.round(convertToFarenheigt(weatherData.list[0].main.temp));
+
+        //updating the List
+
+        var day_index = today;
+        var index = 0;
+
+        while(index <= 6 ){
+            if(day_index > 6) day_index = 0;
+             days.setProperty(index, "high_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)));
+             days.setProperty(index, "low_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)));
+             days.setProperty(index, "humidity", Math.round(convertToFarenheigt(weatherData.list[index].main.humidity)));
+             days.setProperty(index, "day", days[day_index]);
+
+            day_index++;
+            index++;
+        }
+
+      //  days.setProperty(0, "high_temp", weatherObject.list[0].main.temp);
+
+       // position1.stop();
+    }
+
+    function convertToFarenheigt(kelvin){
+        return (1.8 * (kelvin - 273)) + 32;
+    }
 
 }
 
