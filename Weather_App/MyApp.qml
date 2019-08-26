@@ -31,12 +31,13 @@ import QtQuick 2.9
 import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Controls 1.0
 import Esri.ArcGISRuntime 100.2
-
+import ArcGIS.AppFramework.Sql 1.0
+import ArcGIS.AppFramework.SecureStorage 1.0
 App {
     id: app
     width: 400
     height: 640
-
+    property var checkInternet: false
     Rectangle {
         id: navbar
         anchors {
@@ -64,6 +65,21 @@ App {
              Component.onCompleted: updateList()
         }
 
+        //Initialzing the database for local Storage
+        FileFolder {
+          id: fileFolder
+          path: "~/ArcGIS/Data/Sql"
+        }
+
+        SqlDatabase {
+          id: weather_database
+          databaseName: fileFolder.filePath("weather_data.sqlite")
+        }
+       // Component.onCompleted: {
+                   // initDataBase();
+        //}
+
+
 
                //Getting cordinates of the user
                 PositionSource {
@@ -72,13 +88,22 @@ App {
                     id: position1
                   // text1.text = "Component is completed"
                       onPositionChanged:{
+                           fileFolder.makeFolder();
                           var cordinates = position1.position.coordinate;
                            //titleText.text = cordinates.longitude + " , " + cordinates.latitude;
                            getWeatherData(cordinates.latitude,cordinates.longitude );
+                          //if check internet is falase then there is no internet
+                          if(!checkInternet){
+                              //use cached
+                                titleText.text = "No Internet Connections";
+                              //here do the SQL
+                              updateCachedList();
+
+                          }
                       }
                 }
 
-
+            //}
 
 
     }
@@ -143,7 +168,7 @@ App {
             humidity : "222"
         }
         ListElement {
-            day: "Tuesday"
+            day: "No DAy"
             high_temp : "44"
             low_temp : "sss"
             humidity : "222"
@@ -215,18 +240,25 @@ App {
     //"http://free.worldweatheronline.com/feed/weather.ashx?q=Jyv%c3%a4skyl%c3%a4,Finland&format=json&num_of_days=5&key=2d27bd6c4a274f31b0982928192308"
 
     function  getWeatherData(lat, longi){
-       var req = new XMLHttpRequest();
+
+        //init SQL
+        //initDataBase();
+         var req = new XMLHttpRequest();
          var weatherObject;
         var url =  "https://api.openweathermap.org/data/2.5/forecast?lat="+lat+"&lon="+longi+"&APPID=dba70a9c4c2aca0266c9a3a49b987a4f";
         req.open("GET", url, true);
+       // req.status
         req.onreadystatechange = function() {
               weatherObject = JSON.parse(req.responseText);
 
-            if (req.readyState !== 4) return;
-            if (req.status !== 200) return;
+
+            if (req.readyState !== 4 && req.readyState !== 200){
+                           return;
+            }
+
 
             city_name.text = weatherObject.city["name"] + ", " + weatherObject.city["country"];
-           //  days.setProperty(0, "high_temp", weatherObject.list[0].main.temp);
+            SecureStorage.setValue("current_City", weatherObject.city["name"] + ", " +  weatherObject.city["country"]);
             updateListHelper(weatherObject);
           //  position1.stop();
 
@@ -235,23 +267,55 @@ App {
            //return weatherObject;
     }
 
+    function initDataBase(){
+        weather_database.open();
+        var query1 = "DROP TABLE IF EXISTS WEATHER_DATA;";
+        var query2 = "CREATE TABLE WEATHER_DATA(
+                    Day TEXT,
+                    LowTemp INTEGER,
+                    HighTemp INTEGER,
+                    Humidity INTEGER
+                    )";
+        weather_database.query("DROP TABLE IF EXISTS WEATHER_DATA");
+        weather_database.query(query2);
+    //    weather_database.close();
+        // titleText.text = "Database is created";
+    }
+
+    function insertData(day ,low_temp, high_temp, humidity){
+     //   weather_database.open();
+        var statement = "INSERT INTO WEATHER_DATA VALUES
+        ('" + day + "' ," + low_temp + " ," + high_temp + " ," + humidity + ")";
+
+        weather_database.query(statement);
+
+        // city_name.text = "Updating the data "  ;
+    }
+
     function updateList(){
         //First : Get the cordinates
         //Second: Check if the data is already cached in the storage with current date
         //Third :if the data is already cached, do not do api call
         //Fourth Just update the list
+
+        //check if internet exits
+
+
         position1.start();
      }
 
     function updateListHelper(weatherData){
-
+        initDataBase();
+         //set bool == true
+        checkInternet = true;
         //need this array to order list of days
         var weeks = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"];
         //what day is today
         var date = new Date();
         var today = date.getDay();
+        var temp_ =  Math.round(convertToFarenheigt(weatherData.list[0].main.temp));
         //current temperature
-        current_weather.text = weeks[today] +", " + Math.round(convertToFarenheigt(weatherData.list[0].main.temp));
+        current_weather.text = weeks[today] +", " + temp_;
 
         //updating the List
 
@@ -262,16 +326,59 @@ App {
             if(day_index > 6) day_index = 0;
              days.setProperty(index, "high_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)));
              days.setProperty(index, "low_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)));
-             days.setProperty(index, "humidity", Math.round(convertToFarenheigt(weatherData.list[index].main.humidity)));
-             days.setProperty(index, "day", days[day_index]);
+             days.setProperty(index, "humidity", Math.round(weatherData.list[index].main.humidity));
+             days.setProperty(index, "day", weeks[day_index]);
+
+            //insert into the database
+            insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)),
+                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)),
+                       Math.round(weatherData.list[index].main.humidity));
 
             day_index++;
             index++;
         }
-
-      //  days.setProperty(0, "high_temp", weatherObject.list[0].main.temp);
-
+         //current_weather.text = "hello World";
+       // weather_database.open();
+       /* var result = weather_database.query("SELECT * FROM WEATHER_DATA");
+        var data = result.first();
+         city_name.text = data;
+        while (data) {
+            var dataJson = JSON.stringify(result.values);
+            var convert = JSON.parse(dataJson);
+            city_name.text = convert.Day + "sss";
+         data = result.next();
+        }
+        result.finish();*/
+     //   weather_database.close();
        // position1.stop();
+    }
+    function updateCachedList(){
+            weather_database.open();
+         var result = weather_database.query("SELECT * FROM WEATHER_DATA");
+         var data = result.first();
+        city_name.text = SecureStorage.value("current_City");
+     //   city_name.text = data;
+        var weather = false;
+        var index = 0;
+         while (data) {
+             var dataJson = JSON.stringify(result.values);
+             var convert = JSON.parse(dataJson);
+             //city_name.text = convert.Day;
+              if(!weather){
+                  current_weather.text = convert.Day + " , " + (convert.LowTemp + convert.HighTemp) / 2;
+                  weather = true;
+              }
+
+             days.setProperty(index, "high_temp", convert.HighTemp);
+             days.setProperty(index, "low_temp",  convert.LowTemp);
+             days.setProperty(index, "humidity",  convert.Humidity);
+             days.setProperty(index, "day",  convert.Day);
+
+             index++;
+          data = result.next();
+         }
+         result.finish();
+      //  weather_database.close();
     }
 
     function convertToFarenheigt(kelvin){
