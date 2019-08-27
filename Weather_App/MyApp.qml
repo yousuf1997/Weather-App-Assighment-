@@ -65,7 +65,7 @@ App {
             maximumLineCount: 2
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
-             Component.onCompleted: updateList()
+            Component.onCompleted: updateList()
         }
 
         //Initialzing the database for local Storage
@@ -138,12 +138,15 @@ App {
                        if(mapView.visible){
                            listview.visible = true;
                            mapView.visible = false;
+                           city_name.highlighted = false;
                        }else{
 
                            listview.visible = false;
                            mapView.visible = true;
                            mapView.locationDisplay.autoPanMode = Enums.LocationDisplayAutoPanModeCompassNavigation;
                            mapView.locationDisplay.start();
+                           city_name.highlighted = true;
+
                        }
 
             }
@@ -311,6 +314,7 @@ App {
             }
         req.send();
        //
+        position1.stop();
 
     }
 
@@ -362,10 +366,10 @@ App {
         //what day is today
         var date = new Date();
         var today = date.getDay();
-        var temp_ =  Math.round(convertToFarenheigt(weatherData.list[0].main.temp));
+        var temp_ =  Math.round(convertToFarenheigt(weatherData.list[0].main.temp_max));
         //current temperature
 
-      current_weather.text = weeks[today] +", " + temp_;
+      current_weather.text = weeks[today] +", " + temp_ +  "° F";
 
         //updating the List
 
@@ -374,15 +378,15 @@ App {
 
         while(index <= 6 ){
             if(day_index > 6) day_index = 0;
-             days.setProperty(index, "high_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)));
-             days.setProperty(index, "low_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)));
-             days.setProperty(index, "humidity", Math.round(weatherData.list[index].main.humidity));
+             days.setProperty(index, "high_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)) +  "° F");
+             days.setProperty(index, "low_temp", Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)) +  "° F");
+             days.setProperty(index, "humidity", Math.round(weatherData.list[index].main.humidity) + "%");
              days.setProperty(index, "day", weeks[day_index]);
 
             //insert into the database
-            insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)),
-                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)),
-                       Math.round(weatherData.list[index].main.humidity));
+            insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min) +  "° F"),
+                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max) +  "° F"),
+                       Math.round(weatherData.list[index].main.humidity) + "%");
 
             day_index++;
             index++;
@@ -402,7 +406,7 @@ App {
              var convert = JSON.parse(dataJson);
              //city_name.text = convert.Day;
               if(!weather){
-                  current_weather.text = convert.Day + ", " + (convert.LowTemp + convert.HighTemp) / 2;
+                  current_weather.text = convert.Day + ", " +  convert.HighTemp + "° F";
                   weather = true;
               }
 
