@@ -37,7 +37,10 @@ App {
     id: app
     width: 400
     height: 640
-    property var checkInternet: false
+
+
+
+
     Rectangle {
         id: navbar
         anchors {
@@ -81,8 +84,10 @@ App {
 
 
 
-               //Getting cordinates of the user
-                PositionSource {
+
+        //Getting cordinates of the user
+
+            PositionSource {
                   //  PositionSource.position.
                    // Component.onCompleted:
                     id: position1
@@ -90,17 +95,19 @@ App {
                       onPositionChanged:{
                            fileFolder.makeFolder();
                           var cordinates = position1.position.coordinate;
-                           //titleText.text = cordinates.longitude + " , " + cordinates.latitude;
-                           getWeatherData(cordinates.latitude,cordinates.longitude );
-                          //if check internet is falase then there is no internet
-                          if(!checkInternet){
-                              //use cached
-                                titleText.text = "No Internet Connections";
-                              //here do the SQL
-                              updateCachedList();
 
-                          }
+                          //changes the viewpoint of the map
+                       //  point_builder.setXY(cordinates.longitude, cordinates.latitude);
+                       //  mapView.setViewpoint(point_builder.geometry);
+
+                           //titleText.text = cordinates.longitude + " , " + cordinates.latitude;
+                                         //   maps.setViewpoint(cordinates.longitude,cordinates.latitude );
+
+                                                 getWeatherData(cordinates.latitude,cordinates.longitude );
+                                                 updateCachedList();
+
                       }
+
                 }
 
             //}
@@ -116,20 +123,31 @@ App {
             top: navbar.bottom
         }
 
-        height: 80 * AppFramework.displayScaleFactor
+        height: 120 * AppFramework.displayScaleFactor
         color: app.info.propertyValue("titleBackgroundColor", "grey")
-        Text {
+        Button {
             id: city_name
             anchors.centerIn: parent
+
             text: "City Name"
-            color: app.info.propertyValue("titleTextColor", "white")
+     //       color: app.info.propertyValue("titleTextColor", "white")
             font {
-                pointSize: 18
+                pointSize: 13
             }
-            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-            maximumLineCount: 2
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
+            onClicked: {
+                       if(mapView.visible){
+                           listview.visible = true;
+                           mapView.visible = false;
+                       }else{
+
+                           listview.visible = false;
+                           mapView.visible = true;
+                           mapView.locationDisplay.autoPanMode = Enums.LocationDisplayAutoPanModeCompassNavigation;
+                           mapView.locationDisplay.start();
+                       }
+
+            }
+
         }
         Text {
             id: current_weather
@@ -148,9 +166,15 @@ App {
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
         }
+
+
+
+
     }
 
-    //list stuff
+
+
+     //list stuff
 
     ListModel {
         id: days
@@ -225,14 +249,42 @@ App {
             }
         }
 
+
+
+        MapView {
+            id: mapView
+            anchors.fill: parent
+            visible: false
+            Map {
+                BasemapImagery {}
+
+
+            }
+                locationDisplay{
+                    positionSource: PositionSource {
+                        onPositionChanged: {
+
+                        }
+                    }
+                }
+
+        }
+        // Create the intial Viewpoint
+
+
+
+
         ListView {
             anchors.fill: parent
             model: days
+            id:listview
+            visible: true
             delegate: contactDelegate
             highlight: Rectangle { color: "lightsteelblue"; radius: 5 }
          //   Component.onCompleted: updateList()
             focus: true
         }
+
     }
     //API to get the weather data using the cordinates
     //api.openweathermap.org/data/2.5/forecast?lat=35&lon=139&APPID=dba70a9c4c2aca0266c9a3a49b987a4f
@@ -241,30 +293,25 @@ App {
 
     function  getWeatherData(lat, longi){
 
-        //init SQL
-        //initDataBase();
          var req = new XMLHttpRequest();
          var weatherObject;
         var url =  "https://api.openweathermap.org/data/2.5/forecast?lat="+lat+"&lon="+longi+"&APPID=dba70a9c4c2aca0266c9a3a49b987a4f";
         req.open("GET", url, true);
-       // req.status
-        req.onreadystatechange = function() {
+
+        // req.status
+            req.onreadystatechange = function() {
               weatherObject = JSON.parse(req.responseText);
-
-
             if (req.readyState !== 4 && req.readyState !== 200){
-                           return;
-            }
-
-
-            city_name.text = weatherObject.city["name"] + ", " + weatherObject.city["country"];
+                        return;
+                }
+             city_name.text = weatherObject.city["name"] + ", " + weatherObject.city["country"];
             SecureStorage.setValue("current_City", weatherObject.city["name"] + ", " +  weatherObject.city["country"]);
             updateListHelper(weatherObject);
-          //  position1.stop();
 
-        }
+            }
         req.send();
-           //return weatherObject;
+       //
+
     }
 
     function initDataBase(){
@@ -305,9 +352,11 @@ App {
      }
 
     function updateListHelper(weatherData){
+
         initDataBase();
          //set bool == true
-        checkInternet = true;
+
+        //urrent_weather.text = "Hello";
         //need this array to order list of days
         var weeks = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"];
         //what day is today
@@ -315,7 +364,8 @@ App {
         var today = date.getDay();
         var temp_ =  Math.round(convertToFarenheigt(weatherData.list[0].main.temp));
         //current temperature
-        current_weather.text = weeks[today] +", " + temp_;
+
+      current_weather.text = weeks[today] +", " + temp_;
 
         //updating the List
 
@@ -331,26 +381,13 @@ App {
 
             //insert into the database
             insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)),
-                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)),
+                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)),
                        Math.round(weatherData.list[index].main.humidity));
 
             day_index++;
             index++;
         }
-         //current_weather.text = "hello World";
-       // weather_database.open();
-       /* var result = weather_database.query("SELECT * FROM WEATHER_DATA");
-        var data = result.first();
-         city_name.text = data;
-        while (data) {
-            var dataJson = JSON.stringify(result.values);
-            var convert = JSON.parse(dataJson);
-            city_name.text = convert.Day + "sss";
-         data = result.next();
-        }
-        result.finish();*/
-     //   weather_database.close();
-       // position1.stop();
+
     }
     function updateCachedList(){
             weather_database.open();
@@ -365,7 +402,7 @@ App {
              var convert = JSON.parse(dataJson);
              //city_name.text = convert.Day;
               if(!weather){
-                  current_weather.text = convert.Day + " , " + (convert.LowTemp + convert.HighTemp) / 2;
+                  current_weather.text = convert.Day + ", " + (convert.LowTemp + convert.HighTemp) / 2;
                   weather = true;
               }
 
@@ -378,6 +415,7 @@ App {
           data = result.next();
          }
          result.finish();
+
       //  weather_database.close();
     }
 
@@ -385,5 +423,8 @@ App {
         return (1.8 * (kelvin - 273)) + 32;
     }
 
+
+
 }
+
 
