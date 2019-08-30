@@ -128,7 +128,7 @@ App {
         Button {
             id: city_name
             anchors.centerIn: parent
-
+          //  background: app.info.propertyValue("titleTextColor", "white")
             text: "City Name"
      //       color: app.info.propertyValue("titleTextColor", "white")
             font {
@@ -236,6 +236,7 @@ App {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: current_city.bottom
+        id: listParent
 
         Component {
             id: contactDelegate
@@ -278,7 +279,8 @@ App {
 
 
         ListView {
-            anchors.fill: parent
+           anchors.fill: listParent
+          //  anchors.centerIn: listParent
             model: days
             id:listview
             visible: true
@@ -314,7 +316,7 @@ App {
             }
         req.send();
        //
-        position1.stop();
+       position1.stop();
 
     }
 
@@ -384,9 +386,9 @@ App {
              days.setProperty(index, "day", weeks[day_index]);
 
             //insert into the database
-            insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min) +  "° F"),
-                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max) +  "° F"),
-                       Math.round(weatherData.list[index].main.humidity) + "%");
+            insertData(weeks[day_index], Math.round(convertToFarenheigt(weatherData.list[index].main.temp_min)  ),
+                       Math.round(convertToFarenheigt(weatherData.list[index].main.temp_max)  ),
+                       Math.round(weatherData.list[index].main.humidity)  );
 
             day_index++;
             index++;
@@ -398,7 +400,7 @@ App {
          var result = weather_database.query("SELECT * FROM WEATHER_DATA");
          var data = result.first();
         city_name.text = SecureStorage.value("current_City");
-     //   city_name.text = data;
+       //   city_name.text = data;
         var weather = false;
         var index = 0;
          while (data) {
@@ -410,8 +412,8 @@ App {
                   weather = true;
               }
 
-             days.setProperty(index, "high_temp", convert.HighTemp);
-             days.setProperty(index, "low_temp",  convert.LowTemp);
+             days.setProperty(index, "high_temp", convert.HighTemp +  "° F");
+             days.setProperty(index, "low_temp",  convert.LowTemp +  "° F");
              days.setProperty(index, "humidity",  convert.Humidity);
              days.setProperty(index, "day",  convert.Day);
 
